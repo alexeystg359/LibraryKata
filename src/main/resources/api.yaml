@@ -1,0 +1,195 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: Library kata application
+paths:
+  /v1/auth/registration:
+    post:
+      tags:
+      - authentication-controller
+      description: Create an user within the app with USER role
+      operationId: register
+      parameters:
+      - name: username
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: password
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        "400":
+          description: Bad request - validation failed/username already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /v1/book/all:
+    get:
+      tags:
+      - library-controller
+      description: Returns a list of all available books
+      security:
+        - basicAuth: []
+      x-roles:
+        - ADMIN
+        - USER
+      operationId: getAllAvailableBooks
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+  /v1/book/add:
+    post:
+      tags:
+      - library-controller
+      description: Adds a book to the library
+      security:
+        - basicAuth: []
+      x-roles:
+        - ADMIN
+      operationId: add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Book"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: integer
+                format: int64
+        "400":
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string                         
+  /v1/book/borrow:
+    post:
+      tags:
+      - library-controller
+      operationId: borrow
+      description: Borrows a book from a library and assigns it to authenticated user
+      security:
+        - basicAuth: []
+      x-roles:
+        - ADMIN
+        - USER
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Book"
+        "400":
+          description: Bad request - book with provided id is not available
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+  /v1/book/my:
+    get:
+      tags:
+      - library-controller
+      description: Returns a list of borrowed books based on authenticated username
+      security:
+        - basicAuth: []
+      x-roles:
+        - ADMIN
+        - USER
+      operationId: findMyBooks
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+  /v1/book/return:
+    delete:
+      tags:
+      - library-controller
+      description: Returns a book to the library and unasigns it from the authenticated user
+      security:
+        - basicAuth: []
+      x-roles:
+        - ADMIN
+        - USER
+      operationId: returnBook
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "202":
+          description: Accepted
+          content:
+            '*/*':
+              schema:
+                type: string
+        "400":
+          description: Bad request - user did not borrow a book with provided id
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          minLength: 1
+        author:
+          type: string
+          minLength: 1
+      required:
+      - author
+      - name
